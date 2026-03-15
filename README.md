@@ -19,27 +19,6 @@
 
 Web arayüzü üzerinden tek tıkla model eğitimi başlatılabilir, canlı deprem haritası görüntülenebilir ve AI tahmin sonuçları anlık olarak takip edilebilir.
 
----
-
-## ✨ Özellikler
-
-| Özellik | Açıklama |
-|---|---|
-| 🗺️ **Canlı Deprem Haritası** | Leaflet.js ile AFAD/USGS verilerini renk kodlu dairelerle haritada göster |
-| 🤖 **AI Sınıflandırma** | M ≥ 4.0 olayları "Önemli Sismik Olay" olarak sınıflandır |
-| ⚡ **GPU Desteği** | CUDA varsa otomatik olarak GPU'ya geç, yoksa CPU kullan |
-| 🔄 **Otomatik Fallback** | AFAD erişilemezse USGS verisi kullan |
-| 📉 **Eğitim Grafikleri** | Loss ve Accuracy eğrilerini Chart.js ile görselleştir |
-| 🕐 **Otomatik Yenile** | Dashboard 60 saniyede bir AFAD/USGS verilerini günceller |
-| 🌐 **REST API** | FastAPI tabanlı JSON endpoints — kendi uygulamanıza entegre edin |
-
----
-
-## 🖥️ Ekran Görüntüsü
-
-> Dashboard koyu tema arayüzü: harita, istatistik kartları, model eğitim paneli ve deprem listesi içerir.
-
----
 
 ## 🏗️ Proje Yapısı
 
