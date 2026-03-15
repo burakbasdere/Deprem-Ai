@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Deprem AI — Gerçek Zamanlı İzleme</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- ════════════════════════════════════════
+       HEADER
+  ════════════════════════════════════════ -->
+  <header class="header">
+    <div class="header-left">
+      <span class="header-icon">🌍</span>
+      <div>
+        <h1 class="header-title">Deprem AI</h1>
+        <span class="header-sub">Gerçek Zamanlı Sismik İzleme &amp; Derin Öğrenme Sınıflandırma</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="badge badge-device" id="device-badge">⚙️ Yükleniyor…</div>
+      <div class="last-update" id="last-update">Son güncelleme: —</div>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════
+       KONTROl ÇUBUĞU
+  ════════════════════════════════════════ -->
+  <div class="controls-bar">
+    <div class="controls-left">
+      <button class="btn btn-primary" id="btn-refresh">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+          <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+          <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+        </svg>
+        Verileri Yenile
+      </button>
+      <button class="btn btn-accent" id="btn-train">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+          <path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm-2-3a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+        </svg>
+        Modeli Eğit
+      </button>
+    </div>
+    <div class="controls-right">
+      <div class="source-badge" id="source-badge">Kaynak: —</div>
+      <label class="auto-toggle">
+        <input type="checkbox" id="auto-refresh" checked />
+        <span>Otomatik Yenile (60s)</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       İSTATİSTİK KARTLARI
+  ════════════════════════════════════════ -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">📊</div>
+      <div class="stat-value" id="stat-total">—</div>
+      <div class="stat-label">Toplam Olay</div>
+    </div>
+    <div class="stat-card warning">
+      <div class="stat-icon">⚠️</div>
+      <div class="stat-value" id="stat-significant">—</div>
+      <div class="stat-label">Önemli Olay (M ≥ 4.0)</div>
+    </div>
+    <div class="stat-card danger">
+      <div class="stat-icon">📈</div>
+      <div class="stat-value" id="stat-max-mag">—</div>
+      <div class="stat-label">Maksimum Büyüklük</div>
+    </div>
+    <div class="stat-card success">
+      <div class="stat-icon">🤖</div>
+      <div class="stat-value" id="stat-model">Eğitilmedi</div>
+      <div class="stat-label">AI Model Durumu</div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       ANA SATIR: HARİTA + SAĞ PANEL
+  ════════════════════════════════════════ -->
+  <div class="main-row">
+
+    <!-- Harita -->
+    <div class="card map-card">
+      <div class="card-header">
+        <span>🗺️ Deprem Haritası</span>
+        <span class="card-hint" id="map-hint">Yükleniyor…</span>
+      </div>
+      <div id="map"></div>
+    </div>
+
+    <!-- Sağ kolon -->
+    <div class="right-col">
+
+      <!-- Eğitim Paneli -->
+      <div class="card training-card" id="training-card">
+        <div class="card-header">🧠 Model Eğitimi</div>
+        <div class="training-status-row">
+          <span class="training-icon" id="training-icon">⏸️</span>
+          <span class="training-status-text" id="training-status-text">Bekliyor</span>
+        </div>
+        <div class="training-message" id="training-message">
+          Henüz eğitim başlatılmadı.
+        </div>
+        <div class="progress-wrap" id="progress-wrap" style="display:none">
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="progress-bar-fill"></div>
+          </div>
+          <div class="progress-label" id="progress-label">0%</div>
+        </div>
+        <div class="training-final" id="training-final" style="display:none">
+          <div class="metric-row">
+            <span>Eğitim Doğruluğu</span>
+            <span class="metric-val" id="final-train-acc">—</span>
+          </div>
+          <div class="metric-row">
+            <span>Test Doğruluğu</span>
+            <span class="metric-val" id="final-test-acc">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Efsane -->
+      <div class="card legend-card">
+        <div class="card-header">📋 Efsane</div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#10b981"></span>
+          <span>M &lt; 2.5 — Düşük</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#f59e0b"></span>
+          <span>M 2.5–3.9 — Orta</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot" style="background:#ef4444"></span>
+          <span>M ≥ 4.0 — Önemli</span>
+        </div>
+        <hr class="sep">
+        <div class="legend-item">
+          <span class="ai-tag sig">AI: Önemli</span>
+          <span>Model sınıflandırması</span>
+        </div>
+        <div class="legend-item">
+          <span class="ai-tag low">AI: Normal</span>
+          <span>Model sınıflandırması</span>
+        </div>
+        <hr class="sep">
+        <div class="legend-note">Kaynak: AFAD &amp; USGS</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       DEPREM LİSTESİ
+  ════════════════════════════════════════ -->
+  <div class="card table-card">
+    <div class="card-header">
+      <span>📋 Deprem Listesi</span>
+      <span class="card-hint" id="table-hint">—</span>
+    </div>
+    <div class="table-wrap">
+      <table class="eq-table">
+        <thead>
+          <tr>
+            <th>Büyüklük</th>
+            <th>Konum</th>
+            <th>Zaman (UTC)</th>
+            <th>Derinlik (km)</th>
+            <th>Kaynak</th>
+            <th>AI Tahmin</th>
+            <th>Güven (%)</th>
+          </tr>
+        </thead>
+        <tbody id="eq-tbody">
+          <tr>
+            <td colspan="7" class="empty-row">Veri yükleniyor…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       MODEL METRİK GRAFİKLERİ
+  ════════════════════════════════════════ -->
+  <div class="card metrics-card" id="metrics-card" style="display:none">
+    <div class="card-header">📉 Model Eğitim Metrikleri</div>
+    <div class="charts-row">
+      <div class="chart-wrap">
+        <div class="chart-title">Kayıp (Loss)</div>
+        <canvas id="loss-chart"></canvas>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-title">Doğruluk (Accuracy %)</div>
+        <canvas id="acc-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       FOOTER
+  ════════════════════════════════════════ -->
+  <footer class="footer">
+    Deprem AI &nbsp;|&nbsp; AFAD &amp; USGS Veri Kaynakları &nbsp;|&nbsp; PyTorch Derin Öğrenme &nbsp;|&nbsp; FastAPI Backend
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
